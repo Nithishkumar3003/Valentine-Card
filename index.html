@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Valentine Card!</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@400;600;800&display=swap" rel="stylesheet" />
+
+  <!-- Confetti library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <style>
+    :root {
+      /* Fixed, device-independent pink palette */
+      --bg1: #ffc1da;
+      --bg2: #ff99c8;
+      --bg-rad1: rgba(255, 90, 160, 0.28);
+      --bg-rad2: rgba(255, 120, 180, 0.22);
+
+      --card: #fff0f6; /* fixed soft pink card */
+      --accent: #ff3b7a;
+      --accent-2: #ff6aa6;
+      --no-base: #efe6ea;
+      --no-hover: linear-gradient(180deg,#ffd6e6,#ffb3d0);
+      --text-muted: #5b2a3b;
+      --shadow: 0 18px 50px rgba(115,40,62,0.08);
+
+      /* Scale knobs */
+      --card-min: 360px;
+      --card-max: 860px;
+      --card-fluid: 86vmin;
+
+      --button-font: clamp(16px, 2.2vmin, 20px);
+      --button-pad-y: clamp(12px, 1.6vmin, 16px);
+      --button-pad-x: clamp(22px, 3vmin, 28px);
+      --zone-height: clamp(140px, 18vmin, 200px);
+      --image-width: clamp(160px, 22vmin, 220px);
+      --h1-size: clamp(26px, 4.2vmin, 44px);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100svh;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(900px circle at 10% 10%, var(--bg-rad1), transparent 12%),
+        radial-gradient(800px circle at 90% 90%, var(--bg-rad2), transparent 12%),
+        linear-gradient(180deg, var(--bg2), var(--bg1));
+      font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--text-muted);
+      overflow: hidden;
+      padding: 16px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* FULL-SCREEN CONFETTI CANVAS */
+    #confettiCanvas {
+      position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9999;
+    }
+
+    .card {
+      /* Base sizing (will be overridden later) */
+      width: clamp(var(--card-min), var(--card-fluid), var(--card-max));
+      padding: 28px 24px;
+      background: var(--card);
+      backdrop-filter: blur(6px) saturate(110%);
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,120,160,0.14);
+      padding-top: 16px;
+    }
+
+    .art {
+      width: var(--image-width);
+      margin: -10px auto 6px;
+      display: block;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 18px rgba(0,0,0,.08));
+    }
+
+    h1 {
+      margin: 10px 0 14px;
+      font-family: "Playfair Display", serif;
+      font-size: var(--h1-size);
+      color: #5b2a3b;
+      font-weight: 700;
+    }
+
+    .button-zone {
+      position: relative;
+      width: min(520px, 92%);
+      height: var(--zone-height);
+      margin: 6px auto 0;
+      touch-action: none;
+    }
+
+    button {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      padding: var(--button-pad-y) var(--button-pad-x);
+      font-size: var(--button-font);
+      font-weight: 800;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(0,0,0,.12);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .12s ease, background .15s ease, box-shadow .15s ease, color .12s ease;
+    }
+
+    #yesBtn {
+      left: 18%;
+      background: linear-gradient(180deg,var(--accent),var(--accent-2));
+      color: #fff;
+      text-shadow: 0 1px 0 rgba(0,0,0,0.12);
+      will-change: transform, background;
+    }
+
+    /* Stronger specificity to ensure hover wins */
+    button#yesBtn:hover,
+    button#yesBtn:focus-visible {
+      background: linear-gradient(180deg,#ff0f73,#ff4f9d);
+      color: #fff;
+      transform: translateY(-50%) scale(1.04);
+      box-shadow: 0 26px 56px rgba(255, 60, 140, 0.24);
+    }
+
+    #yesBtn:focus {
+      outline: none;
+      box-shadow: 0 22px 44px rgba(255,80,140,0.18), 0 0 0 6px rgba(255,90,140,0.10);
+    }
+
+    #noBtn {
+      left: 62%;
+      background: var(--no-base);
+      color: #5b2a3b;
+      border: 1px solid rgba(91,42,59,0.12);
+    }
+    #noBtn:hover {
+      background: var(--no-hover);
+      color: #7b2040;
+      transform: translateY(-50%) scale(1.03);
+      box-shadow: 0 16px 34px rgba(255,80,140,0.12);
+    }
+
+    .hint {
+      margin-top: 12px;
+      font-size: clamp(12px, 1.6vmin, 14px);
+      opacity: .85;
+    }
+
+    .result {
+      display: none;
+      margin-top: 18px;
+      animation: pop .35s ease;
+    }
+
+    .result h2 {
+      font-size: clamp(30px, 4.5vmin, 46px);
+      margin: 10px 0;
+    }
+
+    .fireworks { width: min(380px, 90vw); margin: 0 auto; display: block; }
+
+    @keyframes pop {
+      from { transform: scale(.96); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    /* WARNING POPUP */
+    .warning-popup {
+      position: fixed;
+      left: 50%;
+      top: 18%;
+      transform: translateX(-50%) translateY(-10px) scale(.98);
+      background: linear-gradient(180deg,#fff8fb,#fff0f6);
+      color: #7b1f3a;
+      border: 1px solid rgba(123,31,58,0.12);
+      padding: 16px 20px;
+      border-radius: 12px;
+      box-shadow: 0 18px 50px rgba(120,30,60,0.12);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .28s ease, transform .28s cubic-bezier(.2,.9,.3,1);
+      z-index: 2000;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .warning-popup.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0) scale(1);
+      pointer-events: auto;
+    }
+    .warning-popup button {
+      margin-left: 8px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      background: linear-gradient(180deg,#ff6aa6,#ff2d7e);
+      color: white;
+    }
+
+    @media (max-width:420px){
+      .art{ width: min(220px, 72vw); }
+      .warning-popup { top: 6%; width: calc(100% - 32px); left: 50%; }
+    }
+
+    /* === INSERTED OVERRIDES (first enlargement set) === */
+    :root {
+      --bg1: #ffd9ec;
+      --bg2: #ffb8d9;
+      --bg-rad1: rgba(255, 90, 160, 0.32);
+      --bg-rad2: rgba(255, 80, 140, 0.28);
+
+      --card: #fff6fb;
+      --accent: #ff0f63;
+      --accent-2: #ff4f9d;
+      --no-base: #f3eaee;
+      --no-hover: linear-gradient(180deg,#ffd6e6,#ffb3d0);
+      --text-muted: #4b1c2a;
+      --shadow: 0 22px 64px rgba(255,80,140,0.14);
+
+      --card-min: 480px;
+      --card-max: 1000px;
+      --card-fluid: 72vmin;
+
+      --image-width: clamp(220px, 28vmin, 420px);
+      --h1-size: clamp(32px, 6vmin, 64px);
+      --button-font: clamp(18px, 2.8vmin, 24px);
+      --button-pad-y: clamp(14px, 2.4vmin, 22px);
+      --button-pad-x: clamp(26px, 4vmin, 36px);
+      --zone-height: clamp(160px, 22vmin, 260px);
+    }
+
+    .card {
+      width: clamp(var(--card-min), var(--card-fluid), var(--card-max));
+      max-width: var(--card-max);
+      padding: 40px 36px;
+      background: var(--card);
+      backdrop-filter: blur(6px) saturate(110%);
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,120,160,0.14);
+      padding-top: 18px;
+    }
+
+    .art {
+      width: var(--image-width);
+      margin: 0 auto 8px;
+      display: block;
+      object-fit: contain;
+      filter: drop-shadow(0 12px 22px rgba(0,0,0,.08));
+    }
+
+    h1 {
+      margin: 6px 0 12px;
+      font-family: "Playfair Display", serif;
+      font-size: var(--h1-size);
+      color: #5b2a3b;
+      font-weight: 700;
+      line-height: 1.02;
+    }
+
+    button {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      padding: var(--button-pad-y) var(--button-pad-x);
+      font-size: var(--button-font);
+      font-weight: 800;
+      border-radius: 999px;
+    }
+
+    .button-zone {
+      position: relative;
+      width: min(620px, 92%);
+      height: var(--zone-height);
+      margin: 10px auto 0;
+      touch-action: none;
+    }
+
+    /* === INSERTED OVERRIDES (second set for wider card) === */
+    .card {
+      width: min(980px, 84vw);
+      max-width: 980px;
+      padding: 36px 32px;
+      background: var(--card);
+      backdrop-filter: blur(6px) saturate(110%);
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,120,160,0.14);
+      padding-top: 18px;
+    }
+
+    @media (min-width: 1400px) {
+      .card {
+        width: 1100px;
+        max-width: 1100px;
+        padding: 44px 40px;
+      }
+      :root {
+        --image-width: 360px;
+        --h1-size: 64px;
+        --button-font: 22px;
+        --zone-height: 260px;
+      }
+    }
+
+    /* === INSERTED OVERRIDES (third set: tighter & cropped) === */
+    .card {
+      width: clamp(420px, 72vw, 920px);
+      max-width: 920px;
+      max-height: 78vh;
+      overflow: hidden;
+      padding: 20px 22px;
+      padding-top: 12px;
+      background: var(--card);
+      backdrop-filter: blur(6px) saturate(110%);
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,120,160,0.14);
+    }
+    .art {
+      width: var(--image-width);
+      margin: 0 auto 6px;
+      display: block;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 18px rgba(0,0,0,.06));
+    }
+    h1 {
+      margin: 4px 0 8px;
+      font-size: var(--h1-size);
+      line-height: 1.01;
+    }
+    .button-zone { margin: 6px auto 6px; }
+    .hint { margin-top: 8px; }
+    @media (max-height: 600px) {
+      .card { max-height: 92vh; }
+    }
+    @media (min-width:1400px) {
+      .card { max-height: 84vh; padding: 28px 32px; }
+      .art { margin-bottom: 10px; }
+      h1 { margin-bottom: 10px; }
+    }
+
+    /* === INSERTED OVERRIDES (FOURTH & FINAL: narrow card as requested) === */
+    .card {
+      /* narrower, well-proportioned card */
+      width: clamp(380px, 60vw, 780px);
+      max-width: 780px;
+
+      /* limit visible height and cut off excess if necessary */
+      max-height: 78vh;
+      overflow: hidden;
+
+      /* tighter internal spacing */
+      padding: 20px 22px;
+      padding-top: 12px;
+
+      background: var(--card);
+      backdrop-filter: blur(6px) saturate(110%);
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,120,160,0.14);
+    }
+    /* === END FINAL OVERRIDES === */
+  </style>
+</head>
+
+<body>
+  <canvas id="confettiCanvas"></canvas>
+
+  <main class="card" role="main" aria-labelledby="title">
+    <!-- ANIMAL WITH HEART -->
+    <!-- If local path blocks in browser, put Cat.png next to this HTML and set src="./Cat.png" -->
+    <img
+      id="remoteArt"
+      class="art"
+      src="Images/Cat.png"
+      alt="Cute cat couple illustration"
+      onerror="this.style.display='none'"
+    />
+    <h1 id="title">Hey, will you be my valentine?</h1>
+
+    <section class="button-zone" id="zone" aria-label="Choices">
+      <button id="yesBtn" aria-label="Yes">Yes</button>
+      <button id="noBtn" aria-label="No">No</button>
+    </section>
+
+    <div class="hint" id="hint">Don't be difficult—just say 'Yes.' 😸</div>
+
+    <section class="result" id="result" aria-live="polite">
+      <h2>Yesss! 🎉</h2>
+      <img
+        class="fireworks"
+        src="https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3bWowaWxicmhxand1YTFuaTV3bW80ZGxlbWpyZm5lY20yMGZsbnpobCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/l3vQYfr7AHKzcEu9W/giphy.gif"
+        alt="Crackers"
+      />
+    </section>
+  </main>
+
+  <!-- Warning popup shown when No is clicked -->
+  <div class="warning-popup" id="warningPopup" role="alert" aria-live="assertive" aria-hidden="true">
+    <div>
+      <strong>Warning</strong>
+      <div style="font-size:13px; opacity:.9;">Are you sure? This isn't quite right — try again!</div>
+    </div>
+    <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+      <button id="warningOk">Got it</button>
+    </div>
+  </div>
+
+  <script>
+    const zone = document.getElementById("zone");
+    const yesBtn = document.getElementById("yesBtn");
+    const noBtn = document.getElementById("noBtn");
+    const result = document.getElementById("result");
+    const hint = document.getElementById("hint");
+    const confettiCanvas = document.getElementById("confettiCanvas");
+
+    const warningPopup = document.getElementById('warningPopup');
+    const warningOk = document.getElementById('warningOk');
+
+    /* ---------- CONFETTI ---------- */
+    function resizeConfettiCanvas() {
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      confettiCanvas.width = Math.floor(window.innerWidth * dpr);
+      confettiCanvas.height = Math.floor(window.innerHeight * dpr);
+      confettiCanvas.style.width = "100vw";
+      confettiCanvas.style.height = "100vh";
+    }
+    resizeConfettiCanvas();
+    window.addEventListener("resize", resizeConfettiCanvas);
+    window.addEventListener("orientationchange", () => setTimeout(resizeConfettiCanvas, 150));
+    const confettiInstance = confetti.create(confettiCanvas, { resize: false, useWorker: true });
+    function fullScreenConfetti() {
+      const end = Date.now() + 1400;
+      (function frame() {
+        confettiInstance({ particleCount: 12, spread: 90, startVelocity: 45, ticks: 160, origin: { x: Math.random(), y: Math.random() * 0.3 } });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      })();
+      setTimeout(() => confettiInstance({ particleCount: 260, spread: 140, startVelocity: 60, ticks: 220, origin: { x: 0.5, y: 0.55 } }), 260);
+    }
+
+    /* ---------- YES BUTTON GROWS ---------- */
+    let yesScale = 1;
+    function growYes() {
+      yesScale = Math.min(2.2, yesScale + 0.1);
+      yesBtn.style.transform = `translateY(-50%) scale(${yesScale})`;
+    }
+
+    /* ---------- NO BUTTON RUNS AWAY ---------- */
+    function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+    function moveNo(px, py) {
+      const z = zone.getBoundingClientRect();
+      const b = noBtn.getBoundingClientRect();
+
+      let dx = (b.left + b.width / 2) - px;
+      let dy = (b.top + b.height / 2) - py;
+      let mag = Math.hypot(dx, dy) || 1;
+      dx /= mag; dy /= mag;
+
+      let newLeft = (b.left - z.left) + dx * 150;
+      let newTop  = (b.top - z.top) + dy * 150;
+
+      newLeft = clamp(newLeft, 0, z.width - b.width);
+      newTop  = clamp(newTop, 0, z.height - b.height);
+
+      noBtn.style.left = newLeft + "px";
+      noBtn.style.top = newTop + "px";
+      noBtn.style.transform = "none";
+
+      growYes();
+    }
+
+    zone.addEventListener("pointermove", e => {
+      const b = noBtn.getBoundingClientRect();
+      const d = Math.hypot(
+        (b.left + b.width / 2) - e.clientX,
+        (b.top + b.height / 2) - e.clientY
+      );
+      if (d < 140) moveNo(e.clientX, e.clientY);
+    });
+
+    /* ---------- NO CLICK: show warning popup ---------- */
+    noBtn.addEventListener("click", e => {
+      e.preventDefault();
+      warningPopup.classList.add('show');
+      warningPopup.setAttribute('aria-hidden', 'false');
+      warningOk.focus();
+    });
+
+    // close warning
+    warningOk.addEventListener('click', () => {
+      warningPopup.classList.remove('show');
+      warningPopup.setAttribute('aria-hidden', 'true');
+      clearTimeout(warningPopup._hideTimer);
+      yesBtn.focus();
+    });
+
+    /* ---------- YES CLICK ---------- */
+    yesBtn.addEventListener("click", () => {
+      zone.style.display = "none";
+      hint.style.display = "none";
+      result.style.display = "block";
+      resizeConfettiCanvas();
+      fullScreenConfetti();
+    });
+
+    // keyboard accessibility
+    yesBtn.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') yesBtn.click(); });
+    noBtn.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') noBtn.click(); });
+
+    // initial absolute positions
+    window.addEventListener('load', () => {
+      const z = zone.getBoundingClientRect();
+      if (!yesBtn.style.left) yesBtn.style.left = Math.round(z.width * 0.18) + 'px';
+      if (!noBtn.style.left)  noBtn.style.left  = Math.round(z.width * 0.62) + 'px';
+    });
+  </script>
+</body>
+</html>
